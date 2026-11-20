@@ -1,81 +1,38 @@
-Ja, dit kan, en zonder `start ms-cxh:localonly`. Maak het account zelf aan vanuit de Shift+F10-console en rond OOBE daarna af. Dan komen de netwerkpagina, de Microsoft-accountpagina en de beveiligingsvragen niet meer langs. Tech Based meldt in oktober 2026 dat deze aanpak op 26H2 nog werkt. Admin365 noemt het de duurzaamste methode, omdat de lokale accountdatabase direct wordt aangepast in plaats van een OOBE-snelkoppeling te gebruiken.
+**Kort antwoord:** ja, dit kan in één regel, zonder beveiligingsvragen en zonder dat het uitmaakt of er netwerk is. Alleen niet met `start ms-cxh:localonly` of `oobe\bypassnro`. Microsoft heeft die twee commando's uit Insider-build 26220.6772 gehaald. Voor 26H2 zijn de berichten tegenstrijdig: onafhankelijke tests meldden dat ook de BypassNRO-registersleutel en de ms-cxh-commando's niet meer werkten, terwijl een forumgebruiker in een VMware-VM beide commando's nog werkend vond op de eerste officiële 26H2-ISO (build 26300.9457). Voor jou maakt dat weinig uit, want beide eindigen bij de standaardpagina met de beveiligingsvragen.
 
-Ik kan dit zelf niet in een VM uitproberen. De bronnen gebruiken `net user`, maar dat toont tijdens het typen helemaal niets, dus ook geen sterretjes. Daarom gebruik ik PowerShell: `Read-Host -AsSecureString` toont voor elk getypt teken een *. Winaero gebruikt PowerShell ook in deze OOBE-console om het account aan te maken. De combinatie hieronder is mijn eigen samenstelling op basis daarvan.
+Wat wél werkt, is de gebruiker zelf aanmaken vanaf de Shift+F10-prompt en OOBE daarna laten afronden met `msoobe`. Een bron over 26H2 noemt dit een zeer betrouwbare methode die nog werkt. Het account wordt rechtstreeks in de lokale accountdatabase gemaakt, zonder OOBE-scherm of snelkoppeling, waardoor het de route is die het best tegen toekomstige patches bestand is.
 
-## Stappen (je zit al op "Let's connect you to a network")
-
-1. Maak eventueel eerst een VMware-snapshot.
-2. Typ in je CMD-venster `powershell` en druk op Enter.
-3. Typ dit, elke regel met Enter:
-
-```powershell
-$n = Read-Host 'Gebruikersnaam'
-do {
-  $a = Read-Host 'Wachtwoord' -AsSecureString
-  $b = Read-Host 'Herhaal wachtwoord' -AsSecureString
-  $x = [pscredential]::new('x', $a).GetNetworkCredential().Password
-  $y = [pscredential]::new('x', $b).GetNetworkCredential().Password
-} until ($x.Length -gt 0 -and $x -ceq $y)
-$u = New-LocalUser -Name $n -Password $a -PasswordNeverExpires -AccountNeverExpires
-Add-LocalGroupMember -SID S-1-5-32-544 -Member $u
-Get-LocalGroupMember -SID S-1-5-32-544
-exit
-```
-
-   - Je ziet per teken een `*`. Je typt het wachtwoord twee keer en de lus herhaalt tot beide gelijk en niet leeg zijn.
-   - `S-1-5-32-544` is in elke taal de groep Administrators. De naam van die groep verschilt per taal, dus een SID is veiliger dan "Administrators" intypen.
-   - `-PasswordNeverExpires` voorkomt dat Windows na 42 dagen (het standaardbeleid) om een nieuw wachtwoord vraagt. Laat het weg als je dat wél wilt.
-   - De laatste regel toont de beheerders, waar jouw naam bij moet staan. Bij een rode foutmelding (bijvoorbeeld "naam bestaat al") ga je niet verder. Verwijder het account dan met `Remove-LocalUser -Name <naam>` en begin opnieuw.
-
-4. Je zit weer in CMD. Typ:
+**Het commando** (typ het precies over in het CMD-venster waarin je nu zit):
 
 ```
-cd /d %windir%\System32\oobe
-msoobe && shutdown -r
+powershell -c "$u=Read-Host Naam;$p=Read-Host Wachtwoord -AsSecureString;New-LocalUser $u -Password $p -PasswordNeverExpires -EA Stop;Add-LocalGroupMember -SID S-1-5-32-544 -Member $u" && cd oobe && msoobe && shutdown -r
 ```
 
-   Deze afsluiting met msoobe en herstart staat ook bij Winaero. De pc herstart na ongeveer 30 seconden.
+- **Wachtwoord met sterretjes:** je typt eerst de naam en daarna het wachtwoord, waarbij je per teken een `*` ziet. PowerShell werkt in die prompt: Microsoft beschrijft zelf dat je vanuit de Shift+F10-prompt in OOBE `powershell.exe` kunt starten. `New-LocalUser` accepteert een wachtwoord dat met `Read-Host -AsSecureString` is ingevoerd.
+- **Administrator-rechten, in elke taal:** `S-1-5-32-544` is de vaste identiteit van de groep Administrators en is op elk Windows-systeem hetzelfde, ongeacht de taal. Dat is nodig omdat de groepsnaam in vertaalde Windows-versies kan verschillen, dus `net localgroup administrators ...` kan falen. `Add-LocalGroupMember` kan de groep via SID aanspreken. Het wordt jouw eigen gebruiker, niet het ingebouwde Administrator-account.
+- **`-PasswordNeverExpires`:** dit is mijn toevoeging. Zonder geldt het standaardbeleid van 42 dagen. Haal het weg als je dat wilt.
+- **`&&`:** de volgende stap start alleen als de vorige slaagde. Mislukt het aanmaken, dan wordt OOBE niet afgesloten en kun je het opnieuw proberen.
+- **`cd oobe && msoobe && shutdown -r`:** dit rondt OOBE af en herstart na ongeveer 30 seconden.
 
-5. Na de herstart: je krijgt een melding dat gebruikersnaam of wachtwoord onjuist is, en het inlogscherm toont eerst defaultuser0. Dat hoort zo. Klik OK, kies linksonder jouw account en log in. Volgens Winaero verdwijnt defaultuser0 na je eerste aanmelding. Blijft hij zichtbaar, dan schakel je hem uit met `net user defaultuser0 /active:no` in een terminal als beheerder.
+**Daarna:** na de herstart verschijnt een foutmelding over een onjuiste gebruikersnaam of wachtwoord, die je mag negeren. Kies dan onderaan het account dat je net hebt gemaakt. De eerste aanmelding duurt even. Op het inlogscherm staat ook `defaultuser0`, een restant van het tijdelijke OOBE-account dat zichtbaar blijft totdat je het uitschakelt. Verwijder het in een CMD met beheerdersrechten, en daarna eventueel de map `C:\Users\defaultuser0`:
 
-## Wat je hiermee wel en niet krijgt
+```
+net user defaultuser0 /delete
+```
 
-- Jouw account zit in de groep Administrators en het ingebouwde Administrator-account blijft uitgeschakeld. Je krijgt wel de gewone UAC-meldingen, zoals bij elk beheerdersaccount.
-- Er zijn geen beveiligingsvragen, dus ook geen wachtwoordherstel via het inlogscherm als je het vergeet.
-- De rest van OOBE wordt overgeslagen, zoals privacykeuzes en de apparaatnaam. Microsoft noemt precies dat als reden om dit soort omwegen te blokkeren. Loop na de eerste aanmelding even Instellingen → Privacy en beveiliging na.
+Omdat OOBE wordt afgekapt, vallen ook pagina's als apparaatnaam en privacykeuzes weg. Microsoft waarschuwt dat zulke omwegen kritieke setup-schermen kunnen overslaan, dus controleer die instellingen achteraf. Het blijft een community-methode zonder steun van Microsoft.
 
-## Netwerk: geen aparte methode nodig
+**Met of zonder netwerk:** voor deze methode maakt het niet uit, dus je hoeft niets apart te doen.
+- **Geen netwerkadapter (jouw VM):** precies zoals hierboven.
+- **Adapter aanwezig maar niet verbonden:** identiek, want de netwerkpagina wordt overgeslagen.
+- **Wel internet (kabel of wifi):** identiek. Je hoeft de verbinding niet eerst te verbreken.
 
-De stappen raken de netwerkpagina niet, dus ze zijn identiek voor drie situaties:
+**Jouw build en latere versies:** ik kan het zelf niet testen en vond geen expliciete bevestiging voor precies build 26300.9974. De methode staat beschreven voor 25H2 en wordt, zoals hierboven, ook voor 26H2 genoemd. Een bovengrens is er niet bekend, maar Microsoft kan `msoobe` of de OOBE-logica altijd aanpassen. Controleer het daarom bij elke nieuwe build in je VM, zoals je nu doet. Als het ooit dichtgaat, is een `autounattend.xml` of een met Rufus gemaakte USB plan B. Die gebruiken officiële functies en blijven volgens de bron voorlopig relevant. Ze moeten wel klaarstaan vóór de installatie.
 
-- Er is geen adapter, zoals in jouw VM.
-- Er is wel een adapter maar nog geen verbinding.
-- Je bent al verbonden via kabel of Wi-Fi.
+**Voor echte laptops en desktops:**
+- Sommige laptops vragen om Fn+Shift+F10, en op sommige afgeschermde OEM-images staat de sneltoets uit.
+- Voer het commando uit na de pagina's voor land en toetsenbord, zoals nu. Anders sla je die keuzes waarschijnlijk ook over.
+- In de blauwe Setup-schermen vóór de eerste herstart werkt het niet, want dan is Windows nog niet geïnstalleerd.
+- Gebruik voor de zekerheid alleen letters en cijfers in naam en wachtwoord, en pas het wachtwoord na de eerste aanmelding eventueel aan. Dan kan een afwijkende toetsenbordindeling in de prompt geen probleem geven.
 
-Het enige verschil is wat er daarna gebeurt. Met een actieve verbinding gaat Windows na de herstart meteen online, dus ontkoppel vooraf als je dat niet wilt. Anders verbind je later op het bureaublad.
-
-## Welke versies, en wat als het ooit niet meer werkt?
-
-De aanpak is gedocumenteerd voor 24H2 (PCWorld), 25H2 (een GitHub-gist, WindowsOSHub) en 26H2 (Tech Based). In een ElevenForum-thread over 26H2-builds, ook jouw 26300.9974, staan dezelfde commando's, al werd daar vooral `start ms-cxh:localonly` bevestigd.
-
-Ik vond geen melding dat Microsoft deze methode blokkeert. Windows Latest zag in een Insider-build van oktober 2025 wél de BypassNRO-registerwaarde, ms-cxh:localonly, setaddlocalonly, nepaccount-trucs en oobenetworkconnectionflow geblokkeerd, maar niet deze methode. Ook de "Learn more"-link is in oktober 2026 server-side dichtgezet.
-
-Voor toekomstige builds kan niemand iets garanderen. Microsoft kondigde in oktober 2025 aan bekende mechanismen voor lokale accounts uit OOBE te halen, omdat ze kritieke setup-schermen overslaan, en deze methode doet dat ook. Test daarom elke nieuwe build eerst in een VM met snapshot.
-
-Valt de methode weg, dan zijn dit de officiële en duurzamere routes:
-
-- Rufus met de optie om de online-accounteis te verwijderen en een lokaal account aan te maken.
-- Een autounattend.xml-antwoordbestand.
-- Bij Windows 11 Pro: "Set up for work or school" en dan "Domain join instead".
-
-gHacks beschrijft deze drie. Een antwoordbestand kun je ook achteraf vanuit Shift+F10 toepassen met sysprep /oobe /unattend. Nadeel: het wachtwoord staat dan in dat bestand en je typt het niet interactief met sterretjes.
-
-## Talen, schermen en echte pc's
-
-- **Talen:** de SID en de PowerShell-cmdlets zijn taalonafhankelijk, en de gebruikersnaam mag in elke taal.
-- **Toetsenbord:** doe dit bij voorkeur ná de toetsenbordkeuze, zoals nu, zodat de console dezelfde indeling gebruikt als het inlogscherm. Klik bij de eerste aanmelding vóór Enter op het oogje om je wachtwoord te controleren.
-- **Schermen:** de bronnen starten bij de landselectie (het eerste OOBE-scherm) en het werkt ook op de Microsoft-accountpagina. Alle OOBE-schermen daartussen zouden dus werken.
-- **Setup-fase:** voor de eerste herstart werkt het niet, bijvoorbeeld bij de schijfkeuze. Daar opent Shift+F10 een tijdelijke omgeving en komt een account niet in je geïnstalleerde Windows terecht. In die fase heb je alleen een antwoordbestand of Rufus.
-- **Echte pc's:** op sommige laptops is het Shift+Fn+F10 (volgens WindowsOSHub), en sommige OEM-images blokkeren de sneltoets.
-
-Als een stap iets anders doet dan ik beschrijf, laat dan weten welke melding of welk scherm je ziet, dan denk ik mee.
+Wil je dat het wachtwoord twee keer wordt gevraagd en vergeleken? Dat kan in dezelfde regel, maar hij wordt dan een stuk langer om over te typen.
