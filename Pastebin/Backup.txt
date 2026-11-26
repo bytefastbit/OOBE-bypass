@@ -37,3 +37,9 @@ Lukt PowerShell niet? Dan kan het ook met net user Jan * /add en net localgroup 
 exit
 cd /d %windir%\System32\oobe
 msoobe && shutdown -r
+
+OPTIONEEL:
+
+Na installatie Windows en inloggen van lokaal gebruikersaccount, indien gewenst, 3 beveiligingsvragen alsnog instellen met:
+
+Run openen (Win + R) > ms-cxh://setsqsalocalonly
