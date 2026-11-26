@@ -1,0 +1,39 @@
+1. PowerShell starten:
+
+CMD openen met Shift + F10 (of Fn + Shift + F10) > powershell > Enter.
+
+2. Wachtwoord instellen voor de lokale gebruiker:
+
+$ww = Read-Host Wachtwoord -AsSecureString
+
+Elk teken dat je typt verschijnt als *, en het wachtwoord wordt beveiligd opgeslagen. Wil je een typfout helemaal uitsluiten, typ het dan nog een keer en vergelijk:
+
+$ww2 = Read-Host Nogmaals -AsSecureString
+[Net.NetworkCredential]::new($null,$ww).Password -ceq [Net.NetworkCredential]::new($null,$ww2).Password
+
+True betekent dat ze gelijk zijn. Bij False doe je stap 2 opnieuw.
+
+3. Lokaal gebruikersaccount maken en administrator rechten toewijzen:
+
+New-LocalUser -Name <naam account hier> -Password $ww -PasswordNeverExpires
+Add-LocalGroupMember -SID S-1-5-32-544 -Member <naam account hier>
+Add-LocalGroupMember -SID S-1-5-32-545 -Member <naam account hier>
+net user <naam account hier>
+
+S-1-5-32-544 is de groep Administrators. De groepsnaam verschilt per taal (in het Duits heet hij bijvoorbeeld Administratoren), maar dit nummer (de SID) niet. Via de SID werkt het in elke taal, zelfs als de groep hernoemd is. 
+
+S-1-5-32-545 is de groep Users/Gebruikers, net als bij een normaal account. Zegt Windows dat Jan daar al lid van is, dan is dat prima.
+
+-PasswordNeverExpires voorkomt dat Windows je na 42 dagen een nieuw wachtwoord laat kiezen. Die termijn geldt alleen voor lokale accounts zonder "Wachtwoord verloopt nooit". 
+
+Regels voor de naam: maximaal 20 tekens, zonder " / \ [ ] : ; | = , + * ? < > @. Het wachtwoord mag maximaal 127 tekens hebben. Kies liefst een naam zonder spaties, dan heb je geen aanhalingstekens nodig. 
+
+net user Jan is je controle. Administrators moet bij de lokale groepen staan, en het wachtwoord moet nooit verlopen.
+
+Lukt PowerShell niet? Dan kan het ook met net user Jan * /add en net localgroup Administrators Jan /add. Maar dan zie je bij het wachtwoord helemaal niets (geen sterretjes), en moet je de groepsnaam in de taal van Windows typen.
+
+4. De installatie afronden
+
+exit
+cd /d %windir%\System32\oobe
+msoobe && shutdown -r
