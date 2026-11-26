@@ -1,3 +1,3 @@
 1. Haal de scripts/commando's op indien nodig met:
 
-Invoke-WebRequest -Uri "https://pastebin.com/raw/cUZxrqcv" -OutFile "C:\commands.txt"
+Invoke-WebRequest -Uri "https://pastebin.com/raw/B5yRPwY3" -OutFile "C:\commands.txt"
