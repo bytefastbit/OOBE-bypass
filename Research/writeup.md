@@ -9,12 +9,12 @@ powershell
 ```powershell
 $ww = Read-Host Wachtwoord -AsSecureString
 ```
-Elk teken dat je typt verschijnt als `*`, en het wachtwoord wordt beveiligd opgeslagen. Wil je een typfout helemaal uitsluiten, typ het dan nog een keer en vergelijk:
+Elk teken dat je typt verschijnt als `*`, en het wachtwoord wordt beveiligd opgeslagen. Typfout helemaal uitsluiten? Typ het dan nog een keer en vergelijk:
 ```powershell
 $ww2 = Read-Host Nogmaals -AsSecureString
 [Net.NetworkCredential]::new($null,$ww).Password -ceq [Net.NetworkCredential]::new($null,$ww2).Password
 ```
-`True` betekent dat ze gelijk zijn. Bij `False` doe je stap 2 opnieuw. Met pijltje-omhoog haal je eerdere regels terug.
+`True` betekent dat ze gelijk zijn. Bij `False` doe je stap 2 opnieuw.
 
 **Stap 3 – Account aanmaken en beheerder maken**
 
@@ -29,8 +29,8 @@ net user Jan
 - **`S-1-5-32-545`** is de groep Users/Gebruikers, net als bij een normaal account. Zegt Windows dat Jan daar al lid van is, dan is dat prima.
 - **`-PasswordNeverExpires`** voorkomt dat Windows je na 42 dagen een nieuw wachtwoord laat kiezen. Die termijn geldt alleen voor lokale accounts zonder "Wachtwoord verloopt nooit".
 - **Regels voor de naam:** maximaal 20 tekens, zonder " / \ [ ] : ; | = , + * ? < > @. Het wachtwoord mag maximaal 127 tekens hebben. Kies liefst een naam zonder spaties, dan heb je geen aanhalingstekens nodig.
-- **`net user Jan`** is je controle. Administrators moet bij de lokale groepen staan, en het wachtwoord moet nooit verlopen.
-- **Lukt PowerShell niet?** Dan kan het ook met `net user Jan * /add` en `net localgroup Administrators Jan /add`. Maar dan zie je bij het wachtwoord helemaal niets (geen sterretjes), en moet je de groepsnaam in de taal van Windows typen.
+- **`net user Jan`** is de controle. Administrators moet bij de lokale groepen staan, en het wachtwoord moet nooit verlopen.
+- **Lukt PowerShell niet?** Dan kan het ook met `net user Jan * /add` en `net localgroup Administrators Jan /add`. Maar dan zie je bij het wachtwoord helemaal niks (geen sterretjes), en moet je de groepsnaam in de taal van Windows typen.
 
 **Stap 4 – De installatie afronden**
 ```
@@ -50,7 +50,7 @@ msoobe && shutdown -r
 De commando's blijven precies hetzelfde. De verschillen:
 - **Adapter aanwezig, maar nog niet verbonden** (je ziet een Wi-Fi-lijst, of de kabel zit er niet in): maak geen verbinding en volg gewoon de stappen hierboven.
 - **Wel internet (kabel of Wi-Fi):** OOBE zoekt dan vaak eerst naar updates en herstart misschien. Daarna kom je op het aanmeldscherm voor het Microsoft-account in plaats van op het netwerkscherm. Wacht tot er een scherm staat dat om invoer vraagt, dus geen draaiend bolletje, en druk dan op Shift+F10. Ook vanaf dat aanmeldscherm werkt de methode.
-- **Extra zekerheid (optioneel):** ga eerst offline. PC Games Hardware raadt bij deze methode aan om pas na de herstart weer internet te verbinden. Trek de kabel eruit, zet de vliegtuigstand aan, of zet in VMware het vinkje "Connected" uit. In PowerShell zet je alle adapters tegelijk uit, in elke taal:
+- **Extra zekerheid (optioneel):** ga eerst offline. Verbind na de herstart/voltooien van installatie pas weer. Trek de kabel eruit, zet de vliegtuigstand aan of schakel de netwerkadapter uit. In PowerShell zet je alle adapters tegelijk uit, in elke taal:
   ```powershell
   Get-NetAdapter | Disable-NetAdapter -Confirm:$false
   ```
