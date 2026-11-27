@@ -1,27 +1,9 @@
-Ik zoek eerst uit wat er eind 2026 in de installatie (OOBE) nog werkt en wat Microsoft al heeft dichtgezet. Daarna schrijf ik een stappenplan voor je uit.
-
-Even een update: ik ben nog aan het uitzoeken welke methoden op de nieuwste 26H2-builds (26300.x) nog werken. Er is een aanpak gevonden die geen beveiligingsvragen nodig heeft. Die controleer ik nu nog even voordat ik je de stappen geef.
-
-Het onderzoek is klaar. Ik schrijf nu het stappenplan uit, plus een kant-en-klaar script dat je op een USB-stick kunt zetten voor echte pc's.
-
-Ja, dit kan op jouw build, zonder Microsoft-account, zonder internet en zonder beveiligingsvragen. Die vragen horen bij de account-wizard van Windows, en die sla je helemaal over:
-
-- Je maakt het account zelf aan in PowerShell. Bij het typen van het wachtwoord zie je dan een `*` per teken.
-- Daarna laat je Windows de installatie zelf afronden met `msoobe`.
-
-Deze `msoobe`-methode wordt op 26H2 nog als betrouwbaar gemeld, ook als je hem start vanaf het aanmeldscherm van het Microsoft-account. Ik heb hem zelf niet op Windows kunnen testen, en jouw build is nieuwer dan de meldingen. Test hem dus eerst in je VM.
-
-## Voordat je begint
-- Maak in VMware eerst een snapshot (VM → Snapshot → Take Snapshot). Gaat er iets mis, dan zet je die gewoon terug.
-- Klik in het VM-venster en druk op Shift+F10. Op sommige laptops is het Fn+Shift+F10, en soms moet je eerst in het venster klikken. Verschijnt er geen opdrachtprompt, herstart dan en probeer het opnieuw.
-
-## De methode (jouw situatie: geen netwerk)
+## De methode
 
 **Stap 1 – PowerShell starten**
 ```
 powershell
 ```
-De prompt begint nu met `PS`.
 
 **Stap 2 – Wachtwoord typen (met sterretjes)**
 ```powershell
@@ -119,5 +101,3 @@ Zet het op een USB-stick en typ in het Shift+F10-venster:
 powershell -ExecutionPolicy Bypass -File E:\maak-lokale-admin.ps1
 ```
 Vervang `E:` door de letter van je stick. Weet je die niet, probeer dan `dir D:\`, `dir E:\` enzovoort. Daarna doe je stap 4; het script laat die commando's ook zien.
-
-Laat gerust weten wat je ziet na stap 4, dan kijken we samen verder als er iets afwijkt.
